@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  gpu-minimal:
+    image: gpu-minimal
+    container_name: gpu-minimal
+    runtime: nvidia #runc  # NIE używamy nvidia runtime, bo ręcznie mapujemy device'y
+#    command: nvidia-smi
+    command: jupyter notebook --ip=0.0.0.0 --allow-root --no-browser --NotebookApp.token='' --NotebookApp.password=''
+    ports:
+      - "8888:8888"
+    devices:
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia0:/dev/nvidia0
+      - /dev/nvidia-uvm:/dev/nvidia-uvm
+    volumes:
+      - ./workspace:/workspace
+      - /usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:ro
+        
