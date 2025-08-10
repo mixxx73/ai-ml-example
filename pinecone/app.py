@@ -14,31 +14,52 @@ Endpoints:
          -H 'Content-Type: application/json' \
          -d '{
                "items": [
-                 {"id":"p1","text":"Buty biegowe z dobrą amortyzacją","metadata":{"cat":"obuwie","price":299}}, # Running shoes with good amortization
-                 {"id":"p2","text":"Buty trailowe z agresywnym bieżnikiem","metadata":{"cat":"obuwie","price":349}}, # Trailing shoes with aggressive rolling
-                 {"id":"p3","text":"Lekka koszulka do biegania","metadata":{"cat":"odziez","price":99}}, # Light tshirt for running
-                 {"id":"p4","text":"Buty do biegania na asfalt, lekkie i szybkie","metadata":{"cat":"obuwie","price":399}}, # Shoes for running on asphalt, lightweight and fast
-                 {"id":"p5","text":"Skarpety kompresyjne do biegania","metadata":{"cat":"odziez","price":59}} # Compression socks for running
+                 {"id":"p1","text":"Buty biegowe z dobrą amortyzacją","metadata":{"cat":"obuwie","price":299}},
+                 {"id":"p2","text":"Buty trailowe z agresywnym bieżnikiem","metadata":{"cat":"obuwie","price":349}},
+                 {"id":"p3","text":"Lekka koszulka do biegania","metadata":{"cat":"odziez","price":99}},
+                 {"id":"p4","text":"Buty do biegania na asfalt, lekkie i szybkie","metadata":{"cat":"obuwie","price":399}},
+                 {"id":"p5","text":"Skarpety kompresyjne do biegania","metadata":{"cat":"odziez","price":59}}
                ]
              }'
+
+        Translation:
+        # Running shoes with good amortization
+        # Trailing shoes with aggressive rolling
+        # Light tshirt for running
+        # Shoes for running on asphalt, lightweight and fast
+        # Compression socks for running
+
 
     # 2) Recommendations content based for description
     curl -X POST http://localhost:8000/recommend/item \
          -H 'Content-Type: application/json' \
-         -d '{"text":"buty do biegania na asfalt z dobrą amortyzacją","k":5, # shoes for running on asphalt with good amortization
-              "filter":{"cat":{"$eq":"obuwie"}}}' # shoes
+         -d '{"text":"buty do biegania na asfalt z dobrą amortyzacją","k":5,
+              "filter":{"cat":{"$eq":"obuwie"}}}'
+
+        Translation:
+        # shoes for running on asphalt with good amortization
+        # shoes
 
     # 3) Recommendations from user profile
     curl -X POST http://localhost:8000/recommend/user \
          -H 'Content-Type: application/json' \
-         -d '{"item_texts":["Buty biegowe na asfalt","Skarpety kompresyjne do biegania"], # Running shoes on asphalt, compression socks
-              "k":5, "filter":{"cat":{"$in":["obuwie","odziez"]}}}' # shoes, clothes
+         -d '{"item_texts":["Buty biegowe na asfalt","Skarpety kompresyjne do biegania"],
+              "k":5, "filter":{"cat":{"$in":["obuwie","odziez"]}}}'
+
+        Translation:
+        # Running shoes on asphalt, compression socks
+        # shoes, clothes
 
     # 4) Session recommendations with MMR diversifications
     curl -X POST http://localhost:8000/recommend/session \
          -H 'Content-Type: application/json' \
-         -d '{"query_text":"buty do biegania na asfalt","k":5,"base_top_k":30,"lambda":0.65, # shoes for running on asphalt
-              "filter":{"cat":{"$eq":"obuwie"}}}' # shoes
+         -d '{"query_text":"buty do biegania na asfalt","k":5,"base_top_k":30,"lambda":0.65,
+              "filter":{"cat":{"$eq":"obuwie"}}}'
+
+        Translation:
+        # shoes for running on asphalt
+        # shoes
+
 """
 
 from __future__ import annotations
