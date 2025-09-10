@@ -3,4 +3,4 @@
     pinecone==5.0.1
     sentence-transformers==3.0.1  # opcjonalne w sandboxie – mamy fallback
     numpy==1.26.4
-    pydantic==2.7.0
+    pydantic>=2.9.0

@@ -6,59 +6,43 @@ Endpoints:
     - GET  /health
     - POST /upsert-items            (id, text, metadata)
     - POST /recommend/item          content-based recommendations text/ID
-    - POST /recommend/user          recommendations from user profile ( vector average )
+    - POST /recommend/user          recommendations from user profile (vector average)
     - POST /recommend/session       session recommendations with MMR diversification
 
     # 1) add data ( shoes/clothes )
-    curl -X POST http://localhost:8000/upsert-items \
+    curl -s -X POST http://localhost:8000/upsert-items \
          -H 'Content-Type: application/json' \
          -d '{
                "items": [
-                 {"id":"p1","text":"Buty biegowe z dobrą amortyzacją","metadata":{"cat":"obuwie","price":299}},
-                 {"id":"p2","text":"Buty trailowe z agresywnym bieżnikiem","metadata":{"cat":"obuwie","price":349}},
-                 {"id":"p3","text":"Lekka koszulka do biegania","metadata":{"cat":"odziez","price":99}},
-                 {"id":"p4","text":"Buty do biegania na asfalt, lekkie i szybkie","metadata":{"cat":"obuwie","price":399}},
-                 {"id":"p5","text":"Skarpety kompresyjne do biegania","metadata":{"cat":"odziez","price":59}}
+                 {"id":"p1","text":"Running shoes with good cushioning","metadata":{"cat":"shoes","price":299}},
+                 {"id":"p2","text":"Trail shoes with aggressive tread","metadata":{"cat":"shoes","price":349}},
+                 {"id":"p3","text":"Lightweight running shirt","metadata":{"cat":"clothes","price":99}},
+                 {"id":"p4","text":"Running shoes for asphalt, light and fast","metadata":{"cat":"shoes","price":399}},
+                 {"id":"p5","text":"Compression socks for running","metadata":{"cat":"clothes","price":59}}
                ]
-             }'
-
-        Translation:
-        # Running shoes with good amortization
-        # Trailing shoes with aggressive rolling
-        # Light tshirt for running
-        # Shoes for running on asphalt, lightweight and fast
-        # Compression socks for running
+             }' | jq
 
 
-    # 2) Recommendations content based for description
-    curl -X POST http://localhost:8000/recommend/item \
+    # 2) Recommendations content based on description
+    curl -s -X POST http://localhost:8000/recommend/item \
          -H 'Content-Type: application/json' \
-         -d '{"text":"buty do biegania na asfalt z dobrą amortyzacją","k":5,
-              "filter":{"cat":{"$eq":"obuwie"}}}'
+         -d '{"text":"shoes for running on asphalt with good cushioning","k":5,
+              "filter":{"cat":{"$eq":"shoes"}}}' | jq
 
-        Translation:
-        # shoes for running on asphalt with good amortization
-        # shoes
 
     # 3) Recommendations from user profile
-    curl -X POST http://localhost:8000/recommend/user \
+    curl -s -X POST http://localhost:8000/recommend/user \
          -H 'Content-Type: application/json' \
-         -d '{"item_texts":["Buty biegowe na asfalt","Skarpety kompresyjne do biegania"],
-              "k":5, "filter":{"cat":{"$in":["obuwie","odziez"]}}}'
+         -d '{"item_texts":["Running shoes for asphalt", "Compression socks for running"],
+              "k":5, "filter":{"cat":{"$in":["shoes","clothes"]}}}' | jq
 
-        Translation:
-        # Running shoes on asphalt, compression socks
-        # shoes, clothes
 
-    # 4) Session recommendations with MMR diversifications
+    # 4) Session recommendations with MMR diversification
     curl -X POST http://localhost:8000/recommend/session \
          -H 'Content-Type: application/json' \
-         -d '{"query_text":"buty do biegania na asfalt","k":5,"base_top_k":30,"lambda":0.65,
-              "filter":{"cat":{"$eq":"obuwie"}}}'
+         -d '{"query_text":"shoes for running on asphalt","k":5,"base_top_k":30,"lambda":0.65,
+              "filter":{"cat":{"$eq":"shoes"}}}'
 
-        Translation:
-        # shoes for running on asphalt
-        # shoes
 
 """
 
@@ -93,7 +77,7 @@ except Exception:  # sandbox / use light packet
 
     class SentenceTransformer:  # noqa: N801
         """Light hash encoder fallback: (384D default).
-        Caution: this is not semantic model, just for demo
+        Caution: this is not a semantic model, just for demo
         """
         def __init__(self, model_name: str = "fallback-hash-encoder", dim: Optional[int] = None):
             self.model_name = model_name
@@ -104,8 +88,8 @@ except Exception:  # sandbox / use light packet
 
         def _tok(self, text: str) -> List[str]:
             text = text.lower()
-            # simple tokenization (letters/digits + polish dialectic symbols)
-            tokens = re.findall(r"[a-zA-Z0-9ąćęłńóśźż]+", text, flags=re.UNICODE)
+            # simple tokenization (letters/digits)
+            tokens = re.findall(r"[a-zA-Z0-9]+", text, flags=re.UNICODE)
             return tokens
 
         def encode(self, text: str) -> np.ndarray:
@@ -210,7 +194,7 @@ except Exception:
 # Configuration
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", "")
 PINECONE_INDEX_NAME = os.environ.get("PINECONE_INDEX_NAME", "recs-index")
-PINECONE_CLOUD = os.environ.get("PINECONE_CLOUD", "gpc")
+PINECONE_CLOUD = os.environ.get("PINECONE_CLOUD", "gcp")
 PINECONE_REGION = os.environ.get("PINECONE_REGION", "us-central1")  # GCP us-central1 (Standard/Enterprise)
 EMBEDDING_MODEL_NAME = os.environ.get("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
 EMBEDDING_DIM = int(os.environ.get("EMBEDDING_DIM", "384"))  # MiniLM-L6-v2 / 384
@@ -475,17 +459,17 @@ if __name__ == "__main__":
     # Test 1: vector length ≈ 1.0 after normalization
     os.environ["SKIP_PINECONE_STARTUP"] = "1"
     _model = SentenceTransformer(os.environ.get("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2"))
-    v1 = embed("Buty biegowe z dobrą amortyzacją")
+    v1 = embed("Running shoes with good cushioning")
     assert abs(float(np.linalg.norm(v1)) - 1.0) < 1e-3, "Embedding is not normalized"
 
     # Test 2: MMR returns k uniq indexes and prefers diversity
     q = v1
     cand = np.stack([
         v1,
-        embed("Buty do biegania na asfalt z dobrą amortyzacją"), # Shoes for running on asphalt with good amortization
-        embed("Lekka koszulka do biegania"), # Light tshirt for running
-        embed("Skarpety kompresyjne do biegania"), # Compression socks for running
-        embed("Buty trailowe na górskie ścieżki") # Trailing shoes for mountain trails
+        embed("Running shoes for asphalt with good cushioning"),
+        embed("Lightweight running shirt"),
+        embed("Compression socks for running"),
+        embed("Trail shoes for mountain paths")
     ])
     ids = ["a","b","c","d","e"]
     out_idx = mmr(q, cand, ids, lambda_=0.65, k=3)
@@ -494,8 +478,8 @@ if __name__ == "__main__":
     # Test 3 : fallback sentence-transformers – deterministic and dimension
     if USING_ST_FALLBACK:
         print("[Self-test] Fallback encoder – testing  deterministic and dimension")
-        v2 = embed("Buty biegowe z dobrą amortyzacją") # Running shoes with good amortization
-        v3 = embed("Buty biegowe z dobrą amortyzacją") # Running shoes with good amortization
+        v2 = embed("Running shoes for asphalt with good cushioning")
+        v3 = embed("Running shoes for asphalt with good cushioning")
         assert v2.shape[0] == int(os.environ.get("EMBEDDING_DIM", "384")), "Wrong fallback dimension"
         assert np.allclose(v2, v3, atol=1e-6), "Fallback encoder is not deterministic"
 
